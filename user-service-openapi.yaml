@@ -1,0 +1,183 @@
+openapi: 3.0.3
+info:
+  title: User Service API
+  description: >
+    Manages user profiles for the Task Management System.
+    Credentials live in Keycloak; this service stores profile data only.
+    All endpoints (except health) require a Bearer JWT issued by Keycloak realm `taskapp`.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081
+    description: Local development
+  - url: https://api.example.com/users
+    description: AWS (via API Gateway → ALB)
+
+security:
+  - keycloakAuth: []
+
+paths:
+  /api/v1/users/me:
+    get:
+      summary: Get the authenticated user's profile
+      description: Returns the profile for the token's `sub`. Auto-provisions on first call.
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: Profile found (or just created)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      summary: Update the authenticated user's profile
+      operationId: updateMyProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/users/{userId}:
+    get:
+      summary: Get a user profile by id
+      description: Callable by the user themself or an admin. Used by other services (e.g. notification-service fetching notify preferences).
+      operationId: getUserById
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /actuator/health:
+    get:
+      summary: Health check (public, used by ALB target group)
+      security: []
+      responses:
+        '200':
+          description: Service is up
+          content:
+            application/json:
+              example: { "status": "UP" }
+
+components:
+  securitySchemes:
+    keycloakAuth:
+      type: openIdConnect
+      openIdConnectUrl: http://localhost:8080/realms/taskapp/.well-known/openid-configuration
+
+  schemas:
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Equals the Keycloak subject (sub) claim
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+          maxLength: 100
+        timezone:
+          type: string
+          example: Europe/Berlin
+        notifyEmail:
+          type: boolean
+        notifySms:
+          type: boolean
+        phone:
+          type: string
+          nullable: true
+          example: "+491701234567"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, email, displayName, timezone, notifyEmail, notifySms]
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+          maxLength: 100
+        timezone:
+          type: string
+        notifyEmail:
+          type: boolean
+        notifySms:
+          type: boolean
+        phone:
+          type: string
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid JWT
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Caller lacks permission for this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
