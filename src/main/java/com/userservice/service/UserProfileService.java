@@ -20,12 +20,20 @@ public class UserProfileService {
         this.repository = repository;
     }
 
-    // Lazy provisioning: the profile is created on first access if absent.
+    @Transactional(readOnly = true)
+    public UserProfileResponse getCurrent(AuthenticatedUser user) {
+        return repository.findById(user.sub())
+                .map(UserProfileMapper::toResponse)
+                .orElseThrow(() -> new ProfileNotFoundException(user.sub()));
+    }
+
     @Transactional
-    public UserProfileResponse getOrCreateCurrent(AuthenticatedUser user) {
-        UserProfile profile = repository.findById(user.sub())
-                .orElseGet(() -> repository.save(
-                        new UserProfile(user.sub(), user.email(), user.displayName())));
+    public UserProfileResponse createCurrent(AuthenticatedUser user) {
+        if (repository.existsById(user.sub())) {
+            throw new ProfileAlreadyExistsException(user.sub());
+        }
+        UserProfile profile = repository.save(
+                new UserProfile(user.sub(), user.email(), user.displayName()));
         return UserProfileMapper.toResponse(profile);
     }
 

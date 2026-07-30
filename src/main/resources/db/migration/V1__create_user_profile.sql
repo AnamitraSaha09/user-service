@@ -7,5 +7,6 @@ CREATE TABLE user_profile (
     notify_sms    BOOLEAN      NOT NULL DEFAULT FALSE,
     phone         VARCHAR(30),
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    version       BIGINT       NOT NULL DEFAULT 0
 );

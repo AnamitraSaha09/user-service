@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -40,6 +41,11 @@ public class UserProfile {
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
+
+    // Optimistic-locking token; Hibernate increments it and rejects stale writes.
+    @Version
+    @Column(nullable = false)
+    private long version;
 
     protected UserProfile() {
     }
@@ -120,5 +126,9 @@ public class UserProfile {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
     }
 }

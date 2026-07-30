@@ -1,5 +1,6 @@
 package com.userservice.web.error;
 
+import com.userservice.service.ProfileAlreadyExistsException;
 import com.userservice.service.ProfileNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ProfileNotFoundException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(ProfileAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ProfileAlreadyExistsException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
